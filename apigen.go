@@ -198,6 +198,11 @@ func pluralize(s string) string {
 }
 
 func isBasicType(t reflect.Type) bool {
+	// Check for time.Time type
+	if t.String() == "time.Time" {
+		return true
+	}
+	
 	switch t.Kind() {
 	case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
