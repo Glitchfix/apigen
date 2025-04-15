@@ -12,9 +12,10 @@ import (
 
 // APIGenerator handles the generation of REST APIs from GORM models
 type APIGenerator struct {
-	DB     *gorm.DB
-	Router *gin.Engine
-	Models map[string]ModelInfo
+	DB              *gorm.DB
+	Router          *gin.Engine
+	Models          map[string]ModelInfo
+	RegisteredPaths map[string]bool // Track registered paths to avoid duplicates
 }
 
 // ModelInfo stores metadata about a model
@@ -46,9 +47,10 @@ type ForeignKeyInfo struct {
 // New creates a new APIGenerator instance
 func New(db *gorm.DB, router *gin.Engine) *APIGenerator {
 	return &APIGenerator{
-		DB:     db,
-		Router: router,
-		Models: make(map[string]ModelInfo),
+		DB:              db,
+		Router:          router,
+		Models:          make(map[string]ModelInfo),
+		RegisteredPaths: make(map[string]bool),
 	}
 }
 
@@ -147,7 +149,12 @@ func (g *APIGenerator) generateModelAPI(modelInfo ModelInfo) {
 	for _, fk := range modelInfo.ForeignKeys {
 		if fk.RelatedModel != "" {
 			relatedPath := fmt.Sprintf("%s/:id/%s", basePath, toSnakeCase(fk.RelatedModel))
-			g.Router.GET(relatedPath, g.relatedHandler(modelInfo, fk))
+			
+			// Check if this path has already been registered
+			if !g.RegisteredPaths[relatedPath] {
+				g.Router.GET(relatedPath, g.relatedHandler(modelInfo, fk))
+				g.RegisteredPaths[relatedPath] = true
+			}
 		}
 	}
 }
