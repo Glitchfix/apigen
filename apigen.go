@@ -2,6 +2,7 @@ package apigen
 
 import (
 	"fmt"
+	"net/http"
 	"reflect"
 	"strings"
 	"unicode"
@@ -128,10 +129,25 @@ func (g *APIGenerator) RegisterModel(model any, resourceName string) error {
 }
 
 // GenerateAPI generates REST API endpoints for all registered models
-func (g *APIGenerator) GenerateAPI() {
+func (g *APIGenerator) GenerateAPI(resourceTitle string, resourceVersion string) {
 	for _, modelInfo := range g.Models {
 		g.generateModelAPI(modelInfo)
 	}
+
+	// Generate Swagger docs
+	swaggerGen := NewSwaggerGenerator(g.Models)
+	definitions := swaggerGen.GenerateModelDefinitions()
+	swaggerGen.BuildPathsForAllModels()
+
+	// Serve Swagger JSON
+	g.Router.GET("/swagger.json", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"swagger":     "2.0",
+			"info":        gin.H{"title": resourceTitle, "version": resourceVersion},
+			"paths":       swaggerGen.GenerateAllPaths(),
+			"definitions": definitions,
+		})
+	})
 }
 
 // generateModelAPI generates REST API endpoints for a specific model
@@ -149,7 +165,7 @@ func (g *APIGenerator) generateModelAPI(modelInfo ModelInfo) {
 	for _, fk := range modelInfo.ForeignKeys {
 		if fk.RelatedModel != "" {
 			relatedPath := fmt.Sprintf("%s/:id/%s", basePath, toSnakeCase(fk.RelatedModel))
-			
+
 			// Check if this path has already been registered
 			if !g.RegisteredPaths[relatedPath] {
 				g.Router.GET(relatedPath, g.relatedHandler(modelInfo, fk))
@@ -209,7 +225,7 @@ func isBasicType(t reflect.Type) bool {
 	if t.String() == "time.Time" {
 		return true
 	}
-	
+
 	switch t.Kind() {
 	case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,

@@ -233,6 +233,47 @@ APIGen lets you focus on the interesting parts of your application instead of wr
 
 Get started now and reclaim those hours of your life you'd otherwise spend writing repetitive API code. Your future self will thank you!
 
+## 🚀 Minimal Example
+
+```go
+package main
+
+import (
+	"github.com/Glitchfix/apigen"
+	"github.com/gin-gonic/gin"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+)
+
+type User struct {
+	gorm.Model
+	Name  string `json:"name" binding:"required"`
+	Email string `json:"email" binding:"required,email"`
+}
+
+func main() {
+	db, _ := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
+	db.AutoMigrate(&User{})
+
+	router := gin.Default()
+
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(
+		swaggerFiles.Handler,
+		ginSwagger.URL("/swagger.json"),
+	))
+
+	apiGen := apigen.New(db, router)
+	apiGen.RegisterModel(User{}, "user")
+	apiGen.GenerateAPI("Minimal API", "1.0.0")
+
+	router.Run(":8080")
+}
+```
+
+Visit [http://localhost:8080/swagger/index.html](http://localhost:8080/swagger/index.html) for beautiful, interactive docs!
+
 ## 🔗 Resources & Community
 
 - **Star us on GitHub** - It makes our day and helps others find this time-saving tool

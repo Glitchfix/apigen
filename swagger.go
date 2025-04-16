@@ -9,13 +9,126 @@ import (
 // SwaggerGenerator generates Swagger documentation for the API
 type SwaggerGenerator struct {
 	Models map[string]ModelInfo
+	paths  map[string]any // internal storage for Swagger paths
 }
 
 // NewSwaggerGenerator creates a new SwaggerGenerator
 func NewSwaggerGenerator(models map[string]ModelInfo) *SwaggerGenerator {
 	return &SwaggerGenerator{
 		Models: models,
+		paths:  make(map[string]any),
 	}
+}
+
+// BuildPathsForAllModels builds the Swagger paths for all CRUD endpoints (internal use)
+func (g *SwaggerGenerator) BuildPathsForAllModels() {
+	paths := make(map[string]any)
+	for _, modelInfo := range g.Models {
+		plural := modelInfo.PluralName
+		modelName := modelInfo.Type.Name()
+		// List endpoint
+		paths["/api/"+plural] = map[string]any{
+			"get": map[string]any{
+				"summary":     "List all " + plural,
+				"responses": map[string]any{
+					"200": map[string]any{
+						"description": "List response",
+						"schema": map[string]any{
+							"type":  "array",
+							"items": map[string]any{"$ref": "#/definitions/" + modelName},
+						},
+					},
+				},
+			},
+			"post": map[string]any{
+				"summary":     "Create a new " + modelInfo.ResourceName,
+				"parameters": []map[string]any{
+					{
+						"in":          "body",
+						"name":        modelInfo.ResourceName,
+						"description": "Create request",
+						"required":    true,
+						"schema":      g.GenerateRequestBody(modelInfo, true),
+					},
+				},
+				"responses": map[string]any{
+					"201": map[string]any{
+						"description": "Created",
+						"schema":      g.GenerateResponseBody(modelInfo),
+					},
+				},
+			},
+		}
+		// Single instance endpoints
+		paths["/api/"+plural+"/{id}"] = map[string]any{
+			"get": map[string]any{
+				"summary":     "Get a " + modelInfo.ResourceName,
+				"parameters": []map[string]any{
+					{"name": "id", "in": "path", "required": true, "type": "string"},
+				},
+				"responses": map[string]any{
+					"200": map[string]any{
+						"description": "Success",
+						"schema":      g.GenerateResponseBody(modelInfo),
+					},
+					"404": map[string]any{"description": "Not found"},
+				},
+			},
+			"put": map[string]any{
+				"summary":     "Update a " + modelInfo.ResourceName,
+				"parameters": []map[string]any{
+					{"name": "id", "in": "path", "required": true, "type": "string"},
+					{
+						"in":          "body",
+						"name":        modelInfo.ResourceName,
+						"description": "Update request",
+						"required":    true,
+						"schema":      g.GenerateRequestBody(modelInfo, false),
+					},
+				},
+				"responses": map[string]any{
+					"200": map[string]any{
+						"description": "Updated",
+						"schema":      g.GenerateResponseBody(modelInfo),
+					},
+					"404": map[string]any{"description": "Not found"},
+				},
+			},
+			"delete": map[string]any{
+				"summary":     "Delete a " + modelInfo.ResourceName,
+				"parameters": []map[string]any{
+					{"name": "id", "in": "path", "required": true, "type": "string"},
+				},
+				"responses": map[string]any{
+					"204": map[string]any{"description": "Deleted"},
+					"404": map[string]any{"description": "Not found"},
+				},
+			},
+		}
+		// Foreign key relationships
+		for _, fk := range modelInfo.ForeignKeys {
+			if fk.RelatedModel != "" {
+				relatedPath := fmt.Sprintf("/api/%s/{id}/%s", plural, toSnakeCase(fk.RelatedModel))
+				paths[relatedPath] = map[string]any{
+					"get": map[string]any{
+						"summary": fmt.Sprintf("Get related %s for %s", fk.RelatedModel, modelInfo.ResourceName),
+						"parameters": []map[string]any{
+							{"name": "id", "in": "path", "required": true, "type": "string"},
+						},
+						"responses": map[string]any{
+							"200": map[string]any{"description": "List response"},
+						},
+					},
+				}
+			}
+		}
+	}
+	g.paths = paths
+}
+
+// GenerateAllPaths returns the internally built paths map
+func (g *SwaggerGenerator) GenerateAllPaths() map[string]any {
+	return g.paths
 }
 
 // GenerateModelDefinitions generates Swagger model definitions for all registered models

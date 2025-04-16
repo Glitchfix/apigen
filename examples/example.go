@@ -5,6 +5,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+
+	// Swagger UI modules
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	// If you generate docs using swag init, import your docs package here
+	// _ "your/module/path/docs"
 )
 
 // Example usage of the API generator
@@ -29,6 +35,13 @@ type Post struct {
 
 // SetupExampleAPI demonstrates how to use the API generator
 func SetupExampleAPI(db *gorm.DB, router *gin.Engine) {
+	// Register Swagger UI endpoint at /swagger/index.html
+	// If you use swag CLI, make sure to generate docs and import the docs package above
+	// This assumes your Swagger JSON is available at /swagger/doc.json (default for swag)
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(
+		swaggerFiles.Handler,
+		ginSwagger.URL("/swagger.json"), // Serve Swagger UI using /swagger.json
+	))
 	// Create a new API generator
 	apiGen := apigen.New(db, router)
 
@@ -37,11 +50,7 @@ func SetupExampleAPI(db *gorm.DB, router *gin.Engine) {
 	apiGen.RegisterModel(Post{}, "post")
 
 	// Generate API endpoints
-	apiGen.GenerateAPI()
-
-	// Generate Swagger documentation
-	swaggerGen := apigen.NewSwaggerGenerator(apiGen.Models)
-	_ = swaggerGen.GenerateModelDefinitions()
+	apiGen.GenerateAPI("Example API", "1.0.0")
 
 	// Generate request and response structs
 	analyzer := apigen.NewModelAnalyzer()
