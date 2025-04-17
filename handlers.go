@@ -55,13 +55,25 @@ func (g *APIGenerator) getHandler(modelInfo ModelInfo) gin.HandlerFunc {
 		instance := reflect.New(modelInfo.Type).Interface()
 
 		// Query the database
-		if err := g.DB.First(instance, id).Error; err != nil {
-			if err == gorm.ErrRecordNotFound {
-				c.JSON(http.StatusNotFound, gin.H{"error": "Record not found"})
+		idField, _ := modelInfo.Type.FieldByName("ID")
+		if idField.Type.Kind() == reflect.String {
+			if err := g.DB.Where("id = ?", id).First(instance).Error; err != nil {
+				if err == gorm.ErrRecordNotFound {
+					c.JSON(http.StatusNotFound, gin.H{"error": "Record not found"})
+					return
+				}
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
+		} else {
+			if err := g.DB.First(instance, id).Error; err != nil {
+				if err == gorm.ErrRecordNotFound {
+					c.JSON(http.StatusNotFound, gin.H{"error": "Record not found"})
+					return
+				}
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
 		}
 
 		// Return the result
@@ -125,13 +137,25 @@ func (g *APIGenerator) updateHandler(modelInfo ModelInfo) gin.HandlerFunc {
 		instance := reflect.New(modelInfo.Type).Interface()
 
 		// First check if the record exists
-		if err := g.DB.First(instance, id).Error; err != nil {
-			if err == gorm.ErrRecordNotFound {
-				c.JSON(http.StatusNotFound, gin.H{"error": "Record not found"})
+		idField, _ := modelInfo.Type.FieldByName("ID")
+		if idField.Type.Kind() == reflect.String {
+			if err := g.DB.Where("id = ?", id).First(instance).Error; err != nil {
+				if err == gorm.ErrRecordNotFound {
+					c.JSON(http.StatusNotFound, gin.H{"error": "Record not found"})
+					return
+				}
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
+		} else {
+			if err := g.DB.First(instance, id).Error; err != nil {
+				if err == gorm.ErrRecordNotFound {
+					c.JSON(http.StatusNotFound, gin.H{"error": "Record not found"})
+					return
+				}
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
 		}
 
 		// Bind the request body to the model
@@ -172,13 +196,25 @@ func (g *APIGenerator) deleteHandler(modelInfo ModelInfo) gin.HandlerFunc {
 		instance := reflect.New(modelInfo.Type).Interface()
 
 		// First check if the record exists
-		if err := g.DB.First(instance, id).Error; err != nil {
-			if err == gorm.ErrRecordNotFound {
-				c.JSON(http.StatusNotFound, gin.H{"error": "Record not found"})
+		idField, _ := modelInfo.Type.FieldByName("ID")
+		if idField.Type.Kind() == reflect.String {
+			if err := g.DB.Where("id = ?", id).First(instance).Error; err != nil {
+				if err == gorm.ErrRecordNotFound {
+					c.JSON(http.StatusNotFound, gin.H{"error": "Record not found"})
+					return
+				}
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
+		} else {
+			if err := g.DB.First(instance, id).Error; err != nil {
+				if err == gorm.ErrRecordNotFound {
+					c.JSON(http.StatusNotFound, gin.H{"error": "Record not found"})
+					return
+				}
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
 		}
 
 		// Delete the record from the database

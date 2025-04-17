@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/Glitchfix/apigen"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"gorm.io/driver/sqlite"
@@ -11,8 +12,14 @@ import (
 
 type User struct {
 	gorm.Model
+	ID    string `gorm:"primaryKey"`
 	Name  string `json:"name" binding:"required"`
 	Email string `json:"email" binding:"required,email"`
+}
+
+func (u *User) BeforeCreate(tx *gorm.DB) (err error) {
+	u.ID = uuid.New().String()
+	return
 }
 
 func main() {
